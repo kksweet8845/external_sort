@@ -6,8 +6,8 @@
 #include <sys/stat.h>
 
 
-#define MAX_RECORDS_SIZE 1<<20
-#define MAX_RECORDS_INDEX MAX_RECORDS_SIZE-1
+#define MAX_RECORDS_SIZE (1<<3)
+#define MAX_RECORDS_INDEX (MAX_RECORDS_SIZE-1)
 
 struct run_ele {
     int* records;
@@ -33,7 +33,7 @@ char* str_assign(const char*);
 void store_run(const char*, run_item_ptr_t);
 run_item_ptr_t read_run(const char*);
 
-int parse_int(char** ptr, int* dx, struct stat* statbuf);
+int parse_int(char** ptr, off_t* dx, struct stat* statbuf);
 
 
 
