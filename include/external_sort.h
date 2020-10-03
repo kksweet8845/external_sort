@@ -6,13 +6,18 @@
 #include <sys/stat.h>
 
 
-#define MAX_RECORDS_SIZE (1<<3)
+#define MAX_RECORDS_SIZE (1<<28)
 #define MAX_RECORDS_INDEX (MAX_RECORDS_SIZE-1)
 
+#define int64_t long long int
+#define int32_t long int
+#define GB ((int64_t)1 << 30)
+#define MB ((int64_t)1 << 20)
+
 struct run_ele {
-    int* records;
+    int32_t* records;
     struct list_head list;
-    long long int len;
+    int64_t len;
     char in_mem; // there is a array stored in disk
     const char* pathname;
 };
@@ -33,7 +38,18 @@ char* str_assign(const char*);
 void store_run(const char*, run_item_ptr_t);
 run_item_ptr_t read_run(const char*);
 
-int parse_int(char** ptr, off_t* dx, struct stat* statbuf);
+int parse_int(char** ptr, off_t* dx, off_t st_size);
+
+
+struct list_head* external_sort(struct list_head*);
+
+struct list_head* external_merge(struct list_head*, int64_t, int64_t);
+run_item_ptr_t merge_from_disk(const char*, const char*);
+
+
+int compare(const void*, const void*);
+
+
 
 
 

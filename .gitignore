@@ -4,3 +4,6 @@ g
 data/
 tmp/
 main
+.vscode/
+t
+final_result
