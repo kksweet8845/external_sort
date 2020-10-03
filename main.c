@@ -12,7 +12,7 @@
 int main(void){
 
 
-    const char* filename = "large_data.txt";
+    const char* filename = "./data/test_data.txt";
 
     struct list_head head;
     INIT_LIST_HEAD(&head);
@@ -37,7 +37,7 @@ int main(void){
         //     printf("%d\n", tmp_run->records[i]);
         // }
     }
-    printf("%lld\n", i);
+    printf("\n%lld\n", i);
 
     printf("============\n");
     struct list_head* final_head = external_sort(&head);
@@ -52,18 +52,19 @@ int main(void){
     int ffd = open(name, O_RDONLY);
 
     int64_t len;
-    int64_t num;
+    int32_t num;
 
     FILE* fp = fopen("final_result", "w");
+    FILE* ferr = fopen("err.txt", "w");
     read(ffd, &len, sizeof(int64_t));
     printf("len : %lld\n", len);
     for(int i=0;i<len;i++){
-        read(ffd, &num, sizeof(int64_t));
+        read(ffd, &num, sizeof(int32_t));
         // printf("%lld\n", num);
-        if(num != i){
-            printf("%d != %d", num, i);
-        }
-        fprintf(fp, "%lld\n", num);
+        // if(num != i){
+        //     fprintf(ferr, "%ld != %d\n", num, i);
+        // }
+        fprintf(fp, "%ld\n", num);
     }
 
     close(ffd);

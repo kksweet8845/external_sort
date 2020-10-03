@@ -7,3 +7,5 @@ main
 .vscode/
 t
 final_result
+err.txt
+monitor.txt

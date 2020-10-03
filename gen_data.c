@@ -39,15 +39,15 @@ int main(void){
     //         printf("%lldMB\n", cur_size >> 10);
     //     }
     // }
-    long long int len = 1*ONE_GB_b + 7;
-    // long long int* arr = malloc(sizeof(long long int) * len);
-    // if(arr == NULL){
-    //     printf("Error\n");
-    // }
-    // for(long long int i=0;i<len;i++){
-    //     arr[i] = i;
-    // }
-    // shuffle(&arr[0], len);
+    // long long int len = 1*ONE_GB_b + 7;
+    long long int* arr = malloc(sizeof(long long int) * len);
+    if(arr == NULL){
+        printf("Error\n");
+    }
+    for(long long int i=0;i<len;i++){
+        arr[i] = i;
+    }
+    shuffle(&arr[0], len);
     for(long long int i=0;i<len;i++){
         fprintf(fp, "%ld\n", random());
     }
