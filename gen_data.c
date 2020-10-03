@@ -39,7 +39,7 @@ int main(void){
     //         printf("%lldMB\n", cur_size >> 10);
     //     }
     // }
-    // long long int len = 1*ONE_GB_b + 7;
+    long long int len = 1<<20 + 7;
     long long int* arr = malloc(sizeof(long long int) * len);
     if(arr == NULL){
         printf("Error\n");
