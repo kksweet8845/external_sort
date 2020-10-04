@@ -21,7 +21,7 @@ void gen_output(int32_t* buf, int64_t len, char* str_buf){
     char* str_cur = str_buf;
     for(int64_t i=0;i<len;i++){
         memset(i2abuf, '\0', 100);
-        sprintf(i2abuf, "%ld\n", buf[i]);
+        sprintf(i2abuf, "%d\n", buf[i]);
         str_cur = strcat(str_cur, i2abuf);
     }
     return;

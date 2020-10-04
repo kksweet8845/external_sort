@@ -86,6 +86,9 @@ int read_file(const char* pathname, struct list_head *head) {
                 qsort((void*) &(runItem->records[0]), runItem->len, sizeof(int32_t), compare);
                 end = time(NULL);
                 printf("Cost %d sec\n", end - start);
+                // for(int i=0;i<100;i++){
+                //     printf("%d\n", runItem->records[i]);
+                // }
                 store_run(runItem->pathname, runItem);
                 // free(runItem->records);
                 // printf("stored, len: %d, dx: %lld, buf_size: %lld\n", runItem->len, dx, buf_size);
@@ -205,7 +208,6 @@ int parse_int(char** ptr, off_t* dx, off_t st_size, char** suspend_str){
         t_ptr++;
         (*dx)++;
     }
-
     if(*dx != st_size && *t_ptr == '\n'){
         (*dx)++;
         *ptr = t_ptr+1;
@@ -220,8 +222,11 @@ int parse_int(char** ptr, off_t* dx, off_t st_size, char** suspend_str){
     }
 
     // printf("dx: %d, statbuf->st_size: %d ", *dx, statbuf->st_size);
-
-    return atoi(buf);
+    char** end_p;
+    long ret = strtol(buf, end_p, 10);
+    // printf("%d\n", ret);
+    return ret;
+    
 }
 
 
@@ -449,6 +454,8 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             b2_re = sread(fd2, buf2, _32_KB, &file2_r);
             b2_p = buf2;
         }
+
+        printf("%d\n", *b1_p);
         if(*b1_p < *b2_p){
             *bo_p++ = *b1_p++;
             --len1;

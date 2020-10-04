@@ -48,7 +48,6 @@ struct list_head* external_sort(struct list_head*);
 struct list_head* external_merge(struct list_head*, int32_t, int32_t);
 run_item_ptr_t merge_from_disk(const char*, const char*);
 
-
 int compare(const void*, const void*);
 
 
