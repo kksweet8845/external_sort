@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 void shuffle(long long int *array, long long int n)
 {
@@ -20,7 +21,7 @@ void shuffle(long long int *array, long long int n)
 int main(void){
 
 
-    const char* filename = "large_data.txt";
+    const char* filename = "./data/5.txt";
 
 
     long long int ONE_GB_b = 1 << 30;
@@ -39,15 +40,16 @@ int main(void){
     //         printf("%lldMB\n", cur_size >> 10);
     //     }
     // }
-    long long int len = 1<<20 + 7;
-    long long int* arr = malloc(sizeof(long long int) * len);
-    if(arr == NULL){
-        printf("Error\n");
-    }
-    for(long long int i=0;i<len;i++){
-        arr[i] = i;
-    }
-    shuffle(&arr[0], len);
+    long long int len = ((int64_t)1 << 32) + 7;
+    // long long int* arr = malloc(sizeof(long long int) * len);
+    // if(arr == NULL){
+    //     printf("Error\n");
+    // }
+    // for(long long int i=0;i<len;i++){
+    //     arr[i] = i;
+    // }
+    // shuffle(&arr[0], len);
+    // printf("MAX: %d", RAND_MAX);
     for(long long int i=0;i<len;i++){
         fprintf(fp, "%ld\n", random());
     }

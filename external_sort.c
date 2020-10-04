@@ -9,6 +9,9 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/types.h>
+#include <stdint.h>
+#include <assert.h>
 
 static const char* final_res = "final_result.txt";
 static FILE* final_fp;
@@ -32,7 +35,7 @@ int read_file(const char* pathname, struct list_head *head) {
 
     int fd = open(pathname, O_RDWR);
     if(fd < 0){
-        printf("open failed");
+        printf("open failed, errno : %d", errno);
         exit(0);
     }
 
@@ -90,7 +93,7 @@ int read_file(const char* pathname, struct list_head *head) {
             printf("munmap is not suess\n");
         }
     }
-
+    close(fd);
     return 0;
 
 }
@@ -120,16 +123,23 @@ void store_run(const char* filename, run_item_ptr_t item){
     char buf[100];
     memset(buf, '\0', 100);
     sprintf(buf, "./tmp/%s", filename);
-    int fd = open(buf, O_RDWR|O_CREAT);
-
+    int fd = open(buf, O_RDWR|O_CREAT, S_IRWXU);
+    if(fd < 0){
+        printf("error : %d\n", errno);
+    }
     item->in_mem = 0;
-
+    int32_t len = item->len;
     write(fd, &item->len, sizeof(int64_t));
-    write(fd, item->records, sizeof(int32_t) * item->len);
-    write(fd, &item->in_mem, sizeof(char));
-    int pathname_l = strlen(filename);
-    write(fd, &pathname_l, sizeof(int));
-    write(fd, item->pathname, sizeof(char) * strlen(item->pathname));
+    int err = write(fd, item->records, sizeof(int32_t)*item->len);
+    if(err == -1){
+        printf("err occurred %d\n", errno);
+    }
+    // printf("%d\n", item->records[0]);
+    // write(fd, &item->in_mem, sizeof(char));
+    // int pathname_l = strlen(filename);
+    // write(fd, &pathname_l, sizeof(int));
+    // write(fd, item->pathname, sizeof(char) * strlen(item->pathname));
+    close(fd);
 }
 
 run_item_ptr_t read_run(const char* filename){
@@ -138,27 +148,27 @@ run_item_ptr_t read_run(const char* filename){
     sprintf(buf, "./tmp/%s", filename);
 
     chmod(buf, S_IRWXU);
-    int fd = open(buf, O_RDWR);
+    int fd = open(buf, O_RDWR, S_IRWXU);
 
     run_item_ptr_t runItem = (run_item_ptr_t)malloc(sizeof(run_item_t));
 
     int64_t len;
-    char in_mem;
-    int pathname_l = 0;
-    char* pathname = NULL;
+    // char in_mem;
+    // int pathname_l = 0;
+    // char* pathname = NULL;
 
     read(fd, &len, sizeof(int64_t));
     int32_t* records = malloc(sizeof(int32_t) * len);
     read(fd, records, sizeof(int32_t)* len);
-    read(fd, &in_mem, sizeof(char));
-    read(fd, &pathname_l, sizeof(int));
-    pathname = malloc(sizeof(char) * pathname_l);
-    read(fd, pathname, sizeof(char)* pathname_l);
+    // read(fd, &in_mem, sizeof(char));
+    // read(fd, &pathname_l, sizeof(int));
+    // pathname = malloc(sizeof(char) * pathname_l);
+    // read(fd, pathname, sizeof(char)* pathname_l);
 
     runItem->len = len;
     runItem->records = records;
-    runItem->in_mem = 1;
-    runItem->pathname = pathname;
+    // runItem->in_mem = 1;
+    // runItem->pathname = pathname;
     INIT_LIST_HEAD(&runItem->list);
 
     close(fd);
@@ -217,21 +227,28 @@ struct list_head* external_sort(struct list_head* head){
         end = time(NULL);
         printf("Cost %d sec --- %d\n", end - start, index++);
         store_run(item->pathname, item);
+        // char buf[100];
+        // memset(buf, '\0', 100);
+        // sprintf(buf, "./check/%s", item->pathname);
+        // FILE* fp = fopen(buf, "w");
         // for(int i=0;i<item->len;i++){
-        //     printf("%d ", item->records[i]);
+        //     // printf("%d ", item->records[i]);
+        //     // assert(item->records[i-1] <= item->records[i]);
+        //     fprintf(fp, "%d\n", item->records[i]);
         // }
-        // printf("\n");
+        // fclose(fp);
+
+        // printf("OK\ns");
     }
-
-
     struct list_head* final_head = external_merge(head, quo, r);
     return final_head;
 }
 
 int compare(const void* arg1, const void* arg2){
-    return (*(int*)arg1 - *(int*)arg2);
+    int32_t a = *((int32_t*)arg1);
+    int32_t b = *((int32_t*)arg2);
+    return (a > b) - (a < b);
 }
-
 
 struct list_head* external_merge(struct list_head* head, int32_t no_run, int32_t r){
 
@@ -239,15 +256,20 @@ struct list_head* external_merge(struct list_head* head, int32_t no_run, int32_t
     INIT_LIST_HEAD(merged_head);
     struct list_head *cur;
     cur = head->next;
+    printf("no_run : %d\n", no_run);
     for(int i=0;i<no_run && no_run >= 1;i++){
+        printf("index: %d\n", i);
         run_item_ptr_t m1 = list_entry(cur, run_item_t, list);
         run_item_ptr_t m2 = list_entry(cur->next, run_item_t, list);
 
         run_item_ptr_t m3 = merge_from_disk(m1->pathname, m2->pathname);
 
+        printf("merge: %d\n", i);
         list_add_tail(&m3->list, merged_head);
         cur = cur->next->next;
+        printf("next->next\n");
     }
+    printf("finish merge\n");
     if(r == 1)
         list_add_tail(cur, merged_head);
 
@@ -276,10 +298,22 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     sprintf(path1, "./tmp/%s", file1);
     sprintf(path2, "./tmp/%s", file2);
 
-    chmod(path1, S_IRWXU);
-    chmod(path2, S_IRWXU);
+    int err = chmod(path1, S_IRWXU);
+    if(err == -1){
+        printf("merge from disk: %d\n", errno);
+    }
+    err = chmod(path2, S_IRWXU);
+    if(err == -1){
+        printf("merge from disk: %d\n", errno);
+    }
     int fd1 = open(path1, O_RDWR);
+    if(fd1 < 0){
+        printf("fd1 errno: %d\n", errno);
+    }
     int fd2 = open(path2, O_RDWR);
+    if(fd2 < 0){
+        printf("fd2 errno: %d\n", errno);
+    }
 
     char name[20];
     gen_random(name, 20);
@@ -287,23 +321,37 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
 
     struct stat statbuf1, statbuf2;
     int err1 = fstat(fd1, &statbuf1);
+    if(err1 == -1){
+        printf("fstat fd1 err1 : %d\n", errno);
+    }
     int err2 = fstat(fd2, &statbuf2);
+    if(err2 == -1){
+        printf("fstat fd2 err2 : %d\n", errno);
+    }
 
     // int64_t* ptr1 = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd1, 0);
     // int64_t* ptr2 = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd2, 0);
 
 
 
-    chmod(path3, S_IRWXU);
-    int fd3 = open(path3, O_RDWR|O_CREAT);
-
+    // chmod(path3, S_IRWXU);
+    int fd3 = open(path3, O_RDWR|O_CREAT, S_IRWXU);
+    if(fd3 < 0){
+        printf("fd3 open error : %d\n",errno);
+    }
     int64_t len1, len2;
     // len1 = *ptr1;
     // len2 = *ptr2;
     // ptr1++;
     // ptr2++;
-    read(fd1, &len1, sizeof(int64_t));
-    read(fd2, &len2, sizeof(int64_t));
+    err = read(fd1, &len1, sizeof(int64_t));
+    if(err == -1){
+        printf("read1 errno: %d\n", errno);
+    }
+    err = read(fd2, &len2, sizeof(int64_t));
+    if(err == -1){
+        printf("read2 errno: %d\n", errno);
+    }
 
     int64_t larger = (len1 >= len2) ? len1 : len2;
     int64_t smaller = (len1 >= len2) ? len2 : len1;
@@ -318,9 +366,17 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     int32_t length = 1 << 23;
 
     buf1 = malloc(_32_KB);
+    if(buf1 == NULL){
+        printf("buf1 alloc error\n");
+    }
     buf2 = malloc(_32_KB);
-
+    if(buf2 == NULL){
+        printf("buf2 alloc error\n");
+    }
     bufo = malloc(_32_KB);
+    if(bufo == NULL){
+        printf("bufo alloc error\n");
+    }
 
     int32_t *b1_p, *b2_p, *bo_p, *b1_end, *b2_end, *bo_end;
     b1_p = buf1;
@@ -328,7 +384,10 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     bo_p = bufo;
 
 
-    write(fd3, &total, sizeof(int64_t));
+    err = write(fd3, &total, sizeof(int64_t));
+    if(err == -1){
+        printf("write 0 error: %d\n", errno);
+    }
 
     // int v1, v2;
     // read(fd1, &v1, sizeof(int));
@@ -343,6 +402,7 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     b1_re = sread(fd1, buf1, _32_KB, &file1_r);
     b2_re = sread(fd2, buf2, _32_KB, &file2_r);
 
+    // printf("herr\n");
     b1_end = buf1 + (length);
     b2_end = buf2 + (length);
     bo_end = bufo + (length);
@@ -379,8 +439,9 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             break;
     }
 
+    // printf("here2\n");
     if(len1 != 0){
-        for(int i=0;i<len1;i++){
+        for(int64_t i=0;i<len1;i++){
             if(bo_p == bo_end){
                 // for(int32_t* cur=bufo;cur!=bo_p;cur++){
                 //     fprintf(fp, "%d\n", *cur);
@@ -396,7 +457,7 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             *bo_p++ = *b1_p++;
         }
     }else{
-        for(int i=0;i<len2;i++){
+        for(int64_t i=0;i<len2;i++){
             if(bo_p == bo_end){
                 // for(int32_t* cur=bufo;cur!=bo_p;cur++){
                 //     fprintf(fp, "%d\n", *cur);
@@ -430,15 +491,32 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     free(buf1);
     free(buf2);
     free(bufo);
+
+    remove(path1);
+    remove(path2);
+
+    // int cfd = open(path3, O_RDWR);
+    // read(cfd, &total, sizeof(int64_t));
+    // int num;
+    // for(int i=0;i<total;i++){
+    //     read(cfd, &num, sizeof(int32_t));
+    //     printf("%d\n", num);
+    // }
+
+    
+
+
     return item;
 }
 
 void* sread(int fd, void* ptr, size_t size, size_t *rsize){
 
+    int err;
     if(*rsize <= size){
-        read(fd, ptr, *rsize);
-        *rsize=0;
-        return ptr + (*rsize);
+        err = read(fd, ptr, *rsize);
+        size_t tmp = *rsize;
+        *rsize = 0;
+        return ptr + tmp;
     }else{
         read(fd, ptr, size);
         *rsize -= size;

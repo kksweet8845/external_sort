@@ -8,11 +8,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
+#include <time.h>
+
 
 int main(void){
 
 
-    const char* filename = "./data/test_data.txt";
+    const char* filename = "./data/test4_data.txt";
 
     struct list_head head;
     INIT_LIST_HEAD(&head);
@@ -40,7 +43,12 @@ int main(void){
     printf("\n%lld\n", i);
 
     printf("============\n");
+    suseconds_t start, end;
+    start = time(NULL);
     struct list_head* final_head = external_sort(&head);
+    end = time(NULL);
+
+    printf("Cost : %d\n", end - start);
 
     run_item_ptr_t final_run = list_entry(final_head->next, run_item_t, list);
 
@@ -49,22 +57,30 @@ int main(void){
     char name[30];
     memset(name, '\0', 30);
     sprintf(name, "./tmp/%s", final_run->pathname);
-    int ffd = open(name, O_RDONLY);
+    int ffd = open(name, O_RDWR);
 
     int64_t len;
     int32_t num;
 
-    FILE* fp = fopen("final_result", "w");
+    FILE* fp = fopen("final_result.txt", "w");
     FILE* ferr = fopen("err.txt", "w");
     read(ffd, &len, sizeof(int64_t));
     printf("len : %lld\n", len);
+    int32_t prev, cur;
     for(int i=0;i<len;i++){
+        num = 0;
         read(ffd, &num, sizeof(int32_t));
-        // printf("%lld\n", num);
-        // if(num != i){
-        //     fprintf(ferr, "%ld != %d\n", num, i);
-        // }
-        fprintf(fp, "%ld\n", num);
+        // printf("%ld\n", num);
+        if(i == 0){
+            prev = num;
+        }else{
+            if(num < prev){
+                fprintf(ferr, "%ld >= %d\n", prev, num);
+            }else {
+                fprintf(fp, "%ld\n", num);
+            }
+            prev = num;
+        }
     }
 
     close(ffd);

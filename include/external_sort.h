@@ -4,12 +4,13 @@
 #include "list.h"
 #include <stdio.h>
 #include <sys/stat.h>
+#include <stdint.h>
 
 
-#define MAX_RECORDS_SIZE (1<<20)
+#define MAX_RECORDS_SIZE (1<<23)
 #define MAX_RECORDS_INDEX (MAX_RECORDS_SIZE-1)
 
-typedef long long int64_t;
+// typedef long long int64_t;
 // typedef long int rec_t;
 
 #define GB ((int64_t)1 << 30)
