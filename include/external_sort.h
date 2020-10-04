@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 
-#define MAX_RECORDS_SIZE (1<<23)
+#define MAX_RECORDS_SIZE (1<<27)
 #define MAX_RECORDS_INDEX (MAX_RECORDS_SIZE-1)
 
 // typedef long long int64_t;
@@ -40,7 +40,7 @@ char* str_assign(const char*);
 void store_run(const char*, run_item_ptr_t);
 run_item_ptr_t read_run(const char*);
 
-int parse_int(char** ptr, off_t* dx, off_t st_size);
+int parse_int(char** ptr, off_t* dx, off_t st_size, char**);
 
 
 struct list_head* external_sort(struct list_head*);

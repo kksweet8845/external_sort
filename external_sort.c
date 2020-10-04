@@ -48,6 +48,7 @@ int read_file(const char* pathname, struct list_head *head) {
 
     int32_t offt_times = (statbuf.st_size >> 30) + 1;
     // printf("%lld\n", statbuf.st_size >> 30);
+    char* num_head = NULL;
     for(int64_t i=0;i<offt_times;i++){
         printf("%lld\n", i);
         char* ptr = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd, i << 30);
@@ -71,20 +72,26 @@ int read_file(const char* pathname, struct list_head *head) {
                 new_runItem(&runItem);
                 list_add_tail(&runItem->list, head);
             }
-
-            num = parse_int(&t_ptr, &dx, buf_size);
+            num = parse_int(&t_ptr, &dx, buf_size, &num_head);
             // printf("%d\n", num);
-            (runItem->records)[run_i] = num;
-            if(run_i == MAX_RECORDS_INDEX || dx == buf_size){
+            if(num_head == NULL)
+                (runItem->records)[run_i] = num;
+            if((run_i == MAX_RECORDS_INDEX || dx == buf_size)){
                 gen_random(&name, 20);
                 // printf("%s\n", name);
                 runItem->len = run_i+1;
                 runItem->pathname = str_assign(name);
+                time_t start, end;
+                start = time(NULL);
+                qsort((void*) &(runItem->records[0]), runItem->len, sizeof(int32_t), compare);
+                end = time(NULL);
+                printf("Cost %d sec\n", end - start);
                 store_run(runItem->pathname, runItem);
                 // free(runItem->records);
                 // printf("stored, len: %d, dx: %lld, buf_size: %lld\n", runItem->len, dx, buf_size);
             }
-            run_i = (run_i == MAX_RECORDS_INDEX || dx == buf_size) ? 0 : run_i + 1;
+            if(num_head == NULL)
+                run_i = (run_i == MAX_RECORDS_INDEX || dx == buf_size) ? 0 : run_i + 1;
 
         }
 
@@ -177,22 +184,39 @@ run_item_ptr_t read_run(const char* filename){
 }
 
 
-int parse_int(char** ptr, off_t* dx, off_t st_size){
+int parse_int(char** ptr, off_t* dx, off_t st_size, char** suspend_str){
     char* t_ptr = *ptr;
     char buf[50];
     memset(buf, '\0', 50);
     char* t_buf = buf;
+    char* sus_str = *suspend_str;
+    int flag = 0;
+    if(*suspend_str != NULL){
+        while(*sus_str != '\0')
+            *t_buf++ = *sus_str++;
+        // free(suspend_str);
+        suspend_str == NULL;
+        printf("truncating\n");
+        flag = 1;
+    }
     while( *dx != st_size && *t_ptr != '\n' ){
         *t_buf = *t_ptr;
         t_buf++;
         t_ptr++;
         (*dx)++;
     }
+
     if(*dx != st_size && *t_ptr == '\n'){
         (*dx)++;
         *ptr = t_ptr+1;
+        *suspend_str = NULL;
+        if(flag == 1){
+            printf("restore %s\n", buf);
+        }
     }else if(*dx == st_size){
-        *ptr = t_ptr;
+        *ptr = strdup(buf);
+        *suspend_str = strdup(buf);
+        printf("prefix %s\n", buf);
     }
 
     // printf("dx: %d, statbuf->st_size: %d ", *dx, statbuf->st_size);
@@ -214,32 +238,32 @@ struct list_head* external_sort(struct list_head* head){
     int32_t r = no_run % 2;
     run_item_ptr_t tmp_run;
     int32_t index =0;
-    list_for_each_entry(item, head, list){
-        if(item->in_mem == 1){
-            tmp_run = read_run(item->pathname);
-            item->records = tmp_run->records;
-            free(tmp_run);
-        }
-        time_t start, end;
-        start = time(NULL);
-        // printf("Start qsort...\n");
-        qsort((void*) &(item->records[0]), item->len, sizeof(int32_t), compare);
-        end = time(NULL);
-        printf("Cost %d sec --- %d\n", end - start, index++);
-        store_run(item->pathname, item);
-        // char buf[100];
-        // memset(buf, '\0', 100);
-        // sprintf(buf, "./check/%s", item->pathname);
-        // FILE* fp = fopen(buf, "w");
-        // for(int i=0;i<item->len;i++){
-        //     // printf("%d ", item->records[i]);
-        //     // assert(item->records[i-1] <= item->records[i]);
-        //     fprintf(fp, "%d\n", item->records[i]);
-        // }
-        // fclose(fp);
+    // list_for_each_entry(item, head, list){
+    //     if(item->in_mem == 1){
+    //         tmp_run = read_run(item->pathname);
+    //         item->records = tmp_run->records;
+    //         free(tmp_run);
+    //     }
+    //     time_t start, end;
+    //     start = time(NULL);
+    //     printf("Start qsort...\n");
+    //     qsort((void*) &(item->records[0]), item->len, sizeof(int32_t), compare);
+    //     end = time(NULL);
+    //     printf("Cost %d sec --- %d\n", end - start, index++);
+    //     store_run(item->pathname, item);
+    //     char buf[100];
+    //     memset(buf, '\0', 100);
+    //     sprintf(buf, "./check/%s", item->pathname);
+    //     FILE* fp = fopen(buf, "w");
+    //     for(int i=0;i<item->len;i++){
+    //         // printf("%d ", item->records[i]);
+    //         // assert(item->records[i-1] <= item->records[i]);
+    //         fprintf(fp, "%d\n", item->records[i]);
+    //     }
+    //     fclose(fp);
 
-        // printf("OK\ns");
-    }
+    //     printf("OK\ns");
+    // }
     struct list_head* final_head = external_merge(head, quo, r);
     return final_head;
 }
@@ -258,16 +282,13 @@ struct list_head* external_merge(struct list_head* head, int32_t no_run, int32_t
     cur = head->next;
     printf("no_run : %d\n", no_run);
     for(int i=0;i<no_run && no_run >= 1;i++){
-        printf("index: %d\n", i);
         run_item_ptr_t m1 = list_entry(cur, run_item_t, list);
         run_item_ptr_t m2 = list_entry(cur->next, run_item_t, list);
 
         run_item_ptr_t m3 = merge_from_disk(m1->pathname, m2->pathname);
 
-        printf("merge: %d\n", i);
         list_add_tail(&m3->list, merged_head);
         cur = cur->next->next;
-        printf("next->next\n");
     }
     printf("finish merge\n");
     if(r == 1)

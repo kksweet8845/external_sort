@@ -11,34 +11,46 @@
 #include <stdint.h>
 #include <time.h>
 
+#define INT_LEN 10
+#define STR_BUF 20
 
-int main(void){
+void gen_output(int32_t* buf, int64_t len, char* str_buf){
+
+    memset(str_buf, '\0', sizeof(char) << STR_BUF);
+    static char i2abuf[100];
+    char* str_cur = str_buf;
+    for(int64_t i=0;i<len;i++){
+        memset(i2abuf, '\0', 100);
+        sprintf(i2abuf, "%ld\n", buf[i]);
+        str_cur = strcat(str_cur, i2abuf);
+    }
+    return;
+}
 
 
-    const char* filename = "./data/test4_data.txt";
+int main(int argc, char* argv[]){
+
+
+    // const char* filename = "./data/test4_data.txt";
+
+    const char* input_file = argv[1];
+    const char* output_file = argv[2];
+
+    printf("Read from : %s\n", input_file);
+    printf("Write to :%s\n", output_file);
 
     struct list_head head;
     INIT_LIST_HEAD(&head);
-    read_file(filename, &head);
+
+    suseconds_t read_start, read_end;
+    read_start = time(NULL);
+    read_file(input_file, &head);
+    read_end = time(NULL);
     run_item_ptr_t item;
     run_item_ptr_t tmp_run;
     long long int i=0;
     list_for_each_entry(item, &head, list){
-
-        // printf("%s\n", item->pathname);
-        // printf("%lld\n", item->len);
-
-
-        // printf("test=======\n");
-
-        // tmp_run = read_run(item->pathname);
         i++;
-
-        // printf("%s\n", tmp_run->pathname);
-        // printf("%d\n", tmp_run->len);
-        // for(int i=0;i<tmp_run->len;i++){
-        //     printf("%d\n", tmp_run->records[i]);
-        // }
     }
     printf("\n%lld\n", i);
 
@@ -48,7 +60,7 @@ int main(void){
     struct list_head* final_head = external_sort(&head);
     end = time(NULL);
 
-    printf("Cost : %d\n", end - start);
+    // printf("Cost : %d\n", end - start);
 
     run_item_ptr_t final_run = list_entry(final_head->next, run_item_t, list);
 
@@ -62,30 +74,52 @@ int main(void){
     int64_t len;
     int32_t num;
 
-    FILE* fp = fopen("final_result.txt", "w");
+    FILE* fp = fopen(output_file, "w");
     FILE* ferr = fopen("err.txt", "w");
     read(ffd, &len, sizeof(int64_t));
+    suseconds_t write_s, write_e;
+    write_s = time(NULL);
     printf("len : %lld\n", len);
     int32_t prev, cur;
-    for(int i=0;i<len;i++){
-        num = 0;
-        read(ffd, &num, sizeof(int32_t));
-        // printf("%ld\n", num);
-        if(i == 0){
-            prev = num;
-        }else{
-            if(num < prev){
-                fprintf(ferr, "%ld >= %d\n", prev, num);
-            }else {
-                fprintf(fp, "%ld\n", num);
-            }
-            prev = num;
-        }
+    int32_t* num_buf = malloc(sizeof(int32_t) << INT_LEN);
+    int32_t quo = len >> INT_LEN;
+    int32_t r = len % INT_LEN;
+    char* str = malloc(sizeof(char) << STR_BUF);
+    for(int64_t i=0;i< quo;i++){
+        read(ffd, num_buf, sizeof(int32_t) << INT_LEN);
+        gen_output(num_buf, 1 << INT_LEN, str);
+        fwrite(str, 1, strlen(str), fp);
     }
+    memset(num_buf, 0, sizeof(int32_t) << INT_LEN);
+    read(ffd, num_buf, sizeof(int32_t) * r);
+    gen_output(num_buf, r, str);
+    fwrite(str, 1, strlen(str), fp);
+    // for(int64_t i=0;i<len;i++){
+    //     num = 0;
+    //     read(ffd, num_buf, sizeof(int32_t) << 10);
+    //     // printf("%ld\n", num);
+    //     fprintf(fp, "%ld\n", num);
+    //     // if(i == 0){
+    //     //     prev = num;
+    //     // }else{
+    //     //     if(num < prev){
+    //     //         fprintf(ferr, "%ld >= %d\n", prev, num);
+    //     //     }else {
+    //     //         fprintf(fp, "%ld\n", num);
+    //     //     }
+    //     //     prev = num;
+    //     // }
+    // }
+    write_e = time(NULL);
+
+    printf("Read time cost: %d\n", read_end - read_start);
+    printf("Write time cost: %d\n", write_e - write_s);
+    printf("Sorting time cost: %d\n", end - start);
 
     close(ffd);
     fclose(fp);
 
+    remove(final_run->pathname);
     return 0;
 
 
