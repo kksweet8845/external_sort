@@ -89,12 +89,7 @@ int read_file(const char* pathname, struct list_head *head) {
                 qsort((void*) &(runItem->records[0]), runItem->len, sizeof(int32_t), compare);
                 end = time(NULL);
                 printf("Cost %d sec\n", end - start);
-                // for(int i=0;i<100;i++){
-                //     printf("%d\n", runItem->records[i]);
-                // }
                 store_run(runItem->pathname, runItem);
-                // free(runItem->records);
-                // printf("stored, len: %d, dx: %lld, buf_size: %lld\n", runItem->len, dx, buf_size);
             }
             run_i = (run_i == MAX_RECORDS_INDEX || dx == buf_size) ? 0 : (num_head == NULL) ? run_i + 1 : run_i;
 
@@ -165,22 +160,13 @@ run_item_ptr_t read_run(const char* filename){
     run_item_ptr_t runItem = (run_item_ptr_t)malloc(sizeof(run_item_t));
 
     int64_t len;
-    // char in_mem;
-    // int pathname_l = 0;
-    // char* pathname = NULL;
 
     read(fd, &len, sizeof(int64_t));
     int32_t* records = malloc(sizeof(int32_t) * len);
     read(fd, records, sizeof(int32_t)* len);
-    // read(fd, &in_mem, sizeof(char));
-    // read(fd, &pathname_l, sizeof(int));
-    // pathname = malloc(sizeof(char) * pathname_l);
-    // read(fd, pathname, sizeof(char)* pathname_l);
 
     runItem->len = len;
     runItem->records = records;
-    // runItem->in_mem = 1;
-    // runItem->pathname = pathname;
     INIT_LIST_HEAD(&runItem->list);
 
     close(fd);
@@ -223,10 +209,8 @@ int parse_int(char** ptr, off_t* dx, off_t st_size, char** suspend_str){
         printf("prefix %s\n", buf);
     }
 
-    // printf("dx: %d, statbuf->st_size: %d ", *dx, statbuf->st_size);
     char** end_p;
     long ret = strtol(buf, end_p, 10);
-    // printf("%d\n", ret);
     return ret;
     
 }
@@ -239,38 +223,10 @@ struct list_head* external_sort(struct list_head* head){
     list_for_each_entry(item, head, list){
         no_run++;
     }
-    // printf("no_run %d\n", no_run);
-
     int32_t quo = no_run >> 1;
     int32_t r = no_run % 2;
     run_item_ptr_t tmp_run;
     int32_t index =0;
-    // list_for_each_entry(item, head, list){
-    //     if(item->in_mem == 1){
-    //         tmp_run = read_run(item->pathname);
-    //         item->records = tmp_run->records;
-    //         free(tmp_run);
-    //     }
-    //     time_t start, end;
-    //     start = time(NULL);
-    //     printf("Start qsort...\n");
-    //     qsort((void*) &(item->records[0]), item->len, sizeof(int32_t), compare);
-    //     end = time(NULL);
-    //     printf("Cost %d sec --- %d\n", end - start, index++);
-    //     store_run(item->pathname, item);
-    //     char buf[100];
-    //     memset(buf, '\0', 100);
-    //     sprintf(buf, "./check/%s", item->pathname);
-    //     FILE* fp = fopen(buf, "w");
-    //     for(int i=0;i<item->len;i++){
-    //         // printf("%d ", item->records[i]);
-    //         // assert(item->records[i-1] <= item->records[i]);
-    //         fprintf(fp, "%d\n", item->records[i]);
-    //     }
-    //     fclose(fp);
-
-    //     printf("OK\ns");
-    // }
     struct list_head* final_head = external_merge(head, quo, r);
     return final_head;
 }
@@ -357,21 +313,11 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
         printf("fstat fd2 err2 : %d\n", errno);
     }
 
-    // int64_t* ptr1 = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd1, 0);
-    // int64_t* ptr2 = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd2, 0);
-
-
-
-    // chmod(path3, S_IRWXU);
     int fd3 = open(path3, O_RDWR|O_CREAT, S_IRWXU);
     if(fd3 < 0){
         printf("fd3 open error : %d\n",errno);
     }
     int64_t len1, len2;
-    // len1 = *ptr1;
-    // len2 = *ptr2;
-    // ptr1++;
-    // ptr2++;
     err = read(fd1, &len1, sizeof(int64_t));
     if(err == -1){
         printf("read1 errno: %d\n", errno);
@@ -385,8 +331,6 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     int64_t smaller = (len1 >= len2) ? len2 : len1;
 
     int64_t total = len1 + len2;
-    // printf("len1: %lld, len2: %lld, total:%lld\n", len1, len2, total);
-    // printf("total: %lld\n", total);
 
     int32_t *buf1, *buf2, *bufo;
 
@@ -417,9 +361,6 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
         printf("write 0 error: %d\n", errno);
     }
 
-    // int v1, v2;
-    // read(fd1, &v1, sizeof(int));
-    // read(fd2, &v2, sizeof(int));
     // buffer read
     int32_t file1_r, file2_r;
     file1_r = statbuf1.st_size;
@@ -435,16 +376,10 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     b2_end = buf2 + (length);
     bo_end = bufo + (length);
 
-    // int64_t *buffer = malloc(sizeof(int64_t) * 1024);
     memset(bufo, 0, _32_KB);
-    // FILE* fp = fopen("./monitor.txt", "w");
     while(1){
         if(bo_p == bo_end){
-            // for(int32_t* cur=bufo;cur!=bo_p;cur++){
-            //     fprintf(fp, "%d\n", *cur);
-            // }
             write(fd3, bufo, _32_KB);
-            // printf("Write 1\n");
             memset(bufo, 0, _32_KB);
             bo_p = bufo;
         }
@@ -468,15 +403,10 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             break;
     }
 
-    // printf("here2\n");
     if(len1 != 0){
         for(int64_t i=0;i<len1;i++){
             if(bo_p == bo_end){
-                // for(int32_t* cur=bufo;cur!=bo_p;cur++){
-                //     fprintf(fp, "%d\n", *cur);
-                // }
                 write(fd3, bufo, _32_KB);
-                // printf("Write 2\n");
                 bo_p = bufo;
             }
             if(b1_p == b1_re){
@@ -488,11 +418,7 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
     }else{
         for(int64_t i=0;i<len2;i++){
             if(bo_p == bo_end){
-                // for(int32_t* cur=bufo;cur!=bo_p;cur++){
-                //     fprintf(fp, "%d\n", *cur);
-                // }
                 write(fd3, bufo, _32_KB);
-                // printf("Write 3\n");
                 bo_p = bufo;
             }
             if(b2_p == b2_end){
@@ -502,14 +428,7 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             *bo_p++ = *b2_p++;
         }
     }
-    // for(int32_t* cur=bufo;cur!=bo_p;cur++){
-    //     fprintf(fp, "%d\n", *cur);
-    // }
-    // printf("bo_p: %p, bufo: %p\n", bo_p, bufo);
-    // printf("%p\n", bo_p - bufo);
     write(fd3, bufo, (bo_p - bufo)<<2);
-    // printf("Write 4\n");
-
     run_item_ptr_t item = malloc(sizeof(run_item_t));
 
     item->len = total;
@@ -523,17 +442,6 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
 
     remove(path1);
     remove(path2);
-
-    // int cfd = open(path3, O_RDWR);
-    // read(cfd, &total, sizeof(int64_t));
-    // int num;
-    // for(int i=0;i<total;i++){
-    //     read(cfd, &num, sizeof(int32_t));
-    //     printf("%d\n", num);
-    // }
-
-    
-
 
     return item;
 }
@@ -553,10 +461,4 @@ void* sread(int fd, void* ptr, size_t size, size_t *rsize){
     }
 
 }
-
-// void swrite(int fd, void* ptr, void* end_ptr){
-
-//     size_t size = end_ptr - ptr;
-//     write(fd, ptr, size);
-// }
 
