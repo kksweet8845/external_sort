@@ -44,15 +44,19 @@ int main(int argc, char* argv[]){
 
     suseconds_t read_start, read_end;
     read_start = time(NULL);
-    read_file(input_file, &head);
+    int64_t t = read_file(input_file, &head);
     read_end = time(NULL);
     run_item_ptr_t item;
     run_item_ptr_t tmp_run;
     long long int i=0;
+    int64_t total = 0;
     list_for_each_entry(item, &head, list){
         i++;
+        total += item->len;
     }
     printf("\n%lld\n", i);
+    printf("read total%ld\n", t);
+    printf("total : %d\n", total);
 
     printf("============\n");
     suseconds_t start, end;
@@ -79,11 +83,13 @@ int main(int argc, char* argv[]){
     read(ffd, &len, sizeof(int64_t));
     suseconds_t write_s, write_e;
     write_s = time(NULL);
-    printf("len : %lld\n", len);
+    printf("len : %ld\n", len);
     int32_t prev, cur;
     int32_t* num_buf = malloc(sizeof(int32_t) << INT_LEN);
     int32_t quo = len >> INT_LEN;
-    int32_t r = len % INT_LEN;
+    printf("%d\n", len);
+    int32_t r = len % (1 << INT_LEN);
+    printf("quo: %d, r: %d\n", quo, r);
     char* str = malloc(sizeof(char) << STR_BUF);
     for(int64_t i=0;i< quo;i++){
         read(ffd, num_buf, sizeof(int32_t) << INT_LEN);

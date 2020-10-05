@@ -4,11 +4,11 @@
 using namespace std;
 
 int main(){
-    ofstream outFile("input100w.txt",ios::out);
+    ofstream outFile("input2ww.txt",ios::out);
     int num = 0;
     int mode = 0;
     long int i;
-    for(i=0;i<1000000;i++){
+    for(i=0;i<2000000000;i++){
         mode=(rand()%2);
         if(mode==1){
             num = rand();

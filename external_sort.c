@@ -49,6 +49,7 @@ int read_file(const char* pathname, struct list_head *head) {
     int32_t offt_times = (statbuf.st_size >> 30) + 1;
     // printf("%lld\n", statbuf.st_size >> 30);
     char* num_head = NULL;
+    int64_t g_total = 0;
     for(int64_t i=0;i<offt_times;i++){
         printf("%lld\n", i);
         char* ptr = mmap(NULL, GB, PROT_READ|PROT_WRITE, MAP_SHARED, fd, i << 30);
@@ -74,12 +75,14 @@ int read_file(const char* pathname, struct list_head *head) {
             }
             num = parse_int(&t_ptr, &dx, buf_size, &num_head);
             // printf("%d\n", num);
-            if(num_head == NULL)
+            if(num_head == NULL){
                 (runItem->records)[run_i] = num;
+            }
             if((run_i == MAX_RECORDS_INDEX || dx == buf_size)){
                 gen_random(&name, 20);
                 // printf("%s\n", name);
-                runItem->len = run_i+1;
+                runItem->len = num_head == NULL ? run_i + 1 : run_i;
+                g_total += runItem->len;
                 runItem->pathname = str_assign(name);
                 time_t start, end;
                 start = time(NULL);
@@ -93,8 +96,7 @@ int read_file(const char* pathname, struct list_head *head) {
                 // free(runItem->records);
                 // printf("stored, len: %d, dx: %lld, buf_size: %lld\n", runItem->len, dx, buf_size);
             }
-            if(num_head == NULL)
-                run_i = (run_i == MAX_RECORDS_INDEX || dx == buf_size) ? 0 : run_i + 1;
+            run_i = (run_i == MAX_RECORDS_INDEX || dx == buf_size) ? 0 : (num_head == NULL) ? run_i + 1 : run_i;
 
         }
 
@@ -104,7 +106,7 @@ int read_file(const char* pathname, struct list_head *head) {
         }
     }
     close(fd);
-    return 0;
+    return g_total;
 
 }
 
@@ -455,7 +457,6 @@ run_item_ptr_t merge_from_disk(const char* file1, const char* file2){
             b2_p = buf2;
         }
 
-        printf("%d\n", *b1_p);
         if(*b1_p < *b2_p){
             *bo_p++ = *b1_p++;
             --len1;
